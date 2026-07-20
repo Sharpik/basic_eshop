@@ -314,16 +314,27 @@ basic_eshop.show_shop_gui = function(name)
 		end
 	end
 	
-	local m = #idxdata;
+	local page_size = 9
 	local n = #idxdata;
 	local pricesort = "";
 	if guidata.sort == 1 then pricesort = "+" elseif guidata.sort == 2 then pricesort  = "-" end
-	
+
+	local total_pages = math.max(1, math.ceil(n / page_size))
+	if n > 0 then
+		local max_start = math.max(1, n - ((n - 1) % page_size))
+		idx = math.min(math.max(idx, 1), max_start)
+		guidata.idx = idx
+	else
+		idx = 1
+		guidata.idx = 1
+	end
+
+	local current_page = math.max(1, math.ceil(idx / page_size))
 	local form = "size[10,8]"..	-- width, height
 	"bgcolor[#222222cc; true]" ..
 	"background[0,0;8,8;gui_formbg.png;true]" ..
 
-	"label[0.4,-0.1;".. minetest.colorize("#6f6e6e", "Basic ") .. minetest.colorize("#6f6e6e", "Online ") .. minetest.colorize("#6f6e6e", "Shop") .. "]" ..
+	"label[0.4,-0.1;".. minetest.colorize("#6f6e6e", "Basic ") .. minetest.colorize("#6f6e6e", "Online ") .. minetest.colorize("#6f6e6e", "eShop") .. "]" ..
 	"label[5,-0.1;" .. minetest.colorize("#aaa", "Your money: ".. get_money(minetest.get_player_by_name(name)) .. " $") .. "]" ..
 
 	"label[0.6,0.7;" .. minetest.colorize("#aaa", "item") .. "]" ..
@@ -331,14 +342,14 @@ basic_eshop.show_shop_gui = function(name)
 	
 	"box[0.35,-0.1;9.05,0.65;#111]".."box[5,-0.1;4.4,0.65;#111]"..
 	"box[0.35,7.2;9.05,0.15;#111]" ..  -- horizontal lines
-	"field[0.65,7.9;2,0.5;search;;".. guidata.filter .."] button[2.5,7.6;1.5,0.5;filter;refresh]"..
+	"field[0.65,7.9;2,0.5;search;;".. guidata.filter .."] button[2.5,7.6;1.5,0.5;filter;Filter]"..
 	"button[4,7.6;1,0.5;help;help]"..
 	"button[6.6,7.6;1,0.5;left;<] button[8.6,7.6;1,0.5;right;>]" ..
-	"label[7.6,7.6; " .. math.ceil(idx/(m+1)) .." / " .. math.ceil(n/(m+1)) .."]";
+	"label[7.6,7.6; " .. current_page .." / " .. total_pages .."]";
 	
 	
 	local tabdata = {};
-	local idxhigh = math.min(idx + m,n);
+	local idxhigh = math.min(idx + page_size - 1,n);
 	
 	for i = idx, idxhigh do
 		local id = idxdata[i] or 1;
@@ -413,21 +424,23 @@ minetest.register_on_player_receive_fields(
 		if fields.left then
 			local guidata = basic_eshop.guidata[name]
 			local idx = guidata.idx;
-			local n =  guidata.count;
-			local m = n;
-			idx = idx - m-1;
-			if idx<0 then idx = math.max(n - n%(m+1),0)+1 end
-			if idx>n then idx = math.max(n-m,1) end
+			local n = guidata.count;
+			local page_size = 10
+			idx = idx - page_size;
+			if idx < 1 then
+				idx = n > 0 and math.max(1, n - ((n - 1) % page_size)) or 1
+			end
+			if idx > n then idx = 1 end
 			guidata.idx = idx;
 			basic_eshop.show_shop_gui(name)
-			return			
+			return		
 		elseif fields.right then
 			local guidata = basic_eshop.guidata[name]
 			local idx = guidata.idx;
-			local n =  guidata.count;
-			local m = n;
-			idx = idx + m+1;
-			if idx>n then idx = 1 end
+			local n = guidata.count;
+			local page_size = 10
+			idx = idx + page_size;
+			if idx > n then idx = 1 end
 			guidata.idx = idx;
 			basic_eshop.show_shop_gui(name)
 			return
